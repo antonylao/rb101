@@ -1,0 +1,41 @@
+en:
+  welcome: "Welcome to Calculator! Enter your name:"
+  valid_name: "Please put a valid name"
+  hi_name: "Hi %{var}!"
+  ask_first_number: "What's the first number?"
+  invalid_number: "Hmm... that doesn't look like a valid number"
+  ask_second_number: "What's the second number?"
+  ask_operation: |
+    What operation would you like to perform?
+        1) add
+        2) subtract
+        3) multiply
+        4) divide
+  invalid_operation: "Must choose 1, 2, 3 or 4"
+  division_by_0: "Cannot divide by 0"
+  making_operation: "%{var} the two numbers..."
+  result: "The result is %{var}"
+  again: "Do you want to perform another calculation? (y/n)"
+  invalid_again_response: "Please type only y/n"
+  goodbye: "Thank you for using the calculator. Good bye!"
+
+es:
+  welcome: "Bienvenido a Calculadora! Entre su nombre:"
+  valid_name: "Asegúrese de entrar un nombre válido."
+  hi_name: "Hola %{var}!"
+  ask_first_number: "¿Cuál es el primer numero?"
+  invalid_number: "Hmm... eso no parece un número válido. Por favor ingrese un número valido."
+  ask_second_number: "¿Cuál es el segundo número?"
+  ask_operation: |
+    ¿Qué operación le gustaría realizar?
+        1) añadir
+        2) sustraer
+        3) multiplicar
+        4) dividir
+  invalid_operation: "Debe elegir 1, 2, 3 o 4"
+  division_by_0: "No se puede dividir por 0."
+  making_operation: "%{var} los dos números."
+  result: "El resultado es %{var}"
+  again: "¿Quieres realizar otro cálculo? (y/n)"
+  invalid_again_response: "Ingrese y/n."
+  goodbye: "Gracias por usar la Calculadora. ¡Adiós!"
