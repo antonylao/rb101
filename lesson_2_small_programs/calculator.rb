@@ -54,10 +54,11 @@ def format_float_trailing_zeros(array)
 
   array
 end
+
 def minus_zero_case(string)
   string = '0' if string.to_f == - string.to_f
 
-  return string
+  string
 end
 
 def dot?(array)
@@ -82,7 +83,7 @@ def format_number(string)
 
   format_float_trailing_zeros(temp_array) if dot?(temp_array)
   array_into_string(temp_array)
-  string = minus_zero_case(string)
+  minus_zero_case(string)
 end
 
 def format_spaces(string)
