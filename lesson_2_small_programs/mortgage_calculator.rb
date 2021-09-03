@@ -1,3 +1,5 @@
+require "pry"
+
 YES = %w(y yes)
 NO = %w(n no)
 VALID_RESPONSE = YES + NO
@@ -6,16 +8,16 @@ def prompt(message)
   puts("=> #{message}")
 end
 
-def integer?(num) # input: string
-  num.to_i().to_s() == num
+def integer?(num_str)
+  num_str.to_i().to_s() == num_str
 end
 
-def float?(num) # input: string
-  num.to_f().to_s() == num
+def float?(num_str)
+  num_str.to_f().to_s() == num_str
 end
 
-def positive?(num) # input: string
-  num.to_f >= 0
+def positive?(num_str)
+  num_str.to_f >= 0
 end
 
 def number?(string)
@@ -87,14 +89,6 @@ def get_formatted_number
   format_number(string)
 end
 
-def valid_loan_duration?(years, months)
-  if positive_integer?(years) && positive_integer?(months) && (((years.to_i) + (months.to_i)) > 0)
-    true
-  else
-    false
-  end
-end
-
 def get_loan_amount
   num = ''
 
@@ -104,26 +98,34 @@ def get_loan_amount
 
     break if positive_number?(num)
     prompt("This loan amount doesn't seem to be valid.
-            Please put a positive number")
+Please put a positive number")
   end
 
   num.to_f
+end
+
+def get_positive_integer(message = nil)
+  num = ''
+  loop do
+    prompt message if message
+    num = get_formatted_number
+    break if positive_integer?(num)
+    prompt("This doesn't seem to be valid. Please put a positive integer")
+  end
+
+  num
 end
 
 def get_loan_duration
   num_years = ''
   num_months = ''
   loop do
-    prompt("What is the loan duration (years)")
-    num_years = get_formatted_number
+    num_years = get_positive_integer("What is the loan duration (years)?")
+    num_months = get_positive_integer("What is the loan duration (months)?")
 
-    prompt("What is the loan duration (months)")
-    num_months = get_formatted_number
-
-    break if valid_loan_duration?(num_years, num_months)
-    prompt("This loan duration doesn't seem to be valid.
-            Please use positive integers only
-            (the total duration cannot be 0)")
+    break if num_years.to_i + num_months.to_i > 0
+    prompt("This doesn't seem to be valid. "\
+    "The total loan duration cannot be 0")
   end
 
   [num_years.to_f, num_months.to_f]
@@ -186,6 +188,7 @@ end
 
 loop do
   system 'clear'
+  prompt("Welcome to the mortgage calculator!")
 
   loan_duration = { years: nil, months: nil }
 
@@ -193,10 +196,12 @@ loop do
   loan_duration[:years], loan_duration[:months] = get_loan_duration
   loan_apr = get_loan_apr
 
+  # rubocop:disable Layout/FirstArgumentIndentation
   total_loan_duration_in_months = calculate_duration_month(
                                     loan_duration[:years],
                                     loan_duration[:months]
                                   )
+  # rubocop:enable Layout/FirstArgumentIndentation
 
   monthly_interest_rate = calculate_monthly_interest_rate(loan_apr)
   monthly_payment = calculate_monthly_payment(loan_amount,
