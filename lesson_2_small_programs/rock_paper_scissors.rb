@@ -146,11 +146,12 @@ rules = <<~MSG
      Scissors cuts Paper / decapitates Lizard
      Lizard eats Paper / poisons Spock
 MSG
-prompt(rules) unless response == 'no'
-
+prompt(rules) if response == 'yes'
+system 'clear' if response == 'no'
 loop do
-  puts("------------------------------------------------------------------------")
-  prompt("First one to score #{GRAND_WINNING_NUMBER} points is the grand winner!")
+  puts("-----------------------------------------------------")
+  prompt("First one to score "\
+         "#{GRAND_WINNING_NUMBER} points is the grand winner!")
 
   score = { player: 0, computer: 0 }
   loop do
