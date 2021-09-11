@@ -1,3 +1,5 @@
+require 'pry'
+
 WIN_CASES = {
   rock: %w(scissors lizard),
   paper: %w(rock spock),
@@ -24,25 +26,35 @@ def win?(first, second)
   WIN_CASES[first.to_sym].include?(second)
 end
 
-def results_number(player, computer)
+def results_sym(player, computer)
   num = if win?(player, computer)
-          1
+          :player_won
         elsif win?(computer, player)
-          -1
+          :computer_won
         else
-          0
+          :tie
         end
 
   num
 end
 
-def display_results(integer)
-  case integer
-  when 1 then prompt("You won!")
-  when -1 then prompt("Computer won!")
-  when 0 then prompt("It's a tie!")
+def display_results(choice_player, choice_computer, result_symbol, score_hash)
+  prompt("You chose: #{choice_player}; Computer chose: #{choice_computer}")
+
+  case result_symbol
+  when :player_won then prompt("You won!")
+  when :computer_won then prompt("Computer won!")
+  when :tie then prompt("It's a tie!")
   else prompt("error in display_results")
   end
+
+  prompt(
+    <<~MSG
+    The score is: #{score_hash[:player]} for you,
+                     #{score_hash[:computer]} for the computer.
+
+    MSG
+  )
 end
 
 def max_length_array(array_of_str)
@@ -107,10 +119,10 @@ def get_valid_input(valid_list, beginning_message = nil)
   end
 end
 
-def array_new_score(score, results_num)
-  case results_num
-  when 1 then score[0] += 1
-  when -1 then score[1] += 1
+def array_new_score(score, result_symbol)
+  case result_symbol
+  when :player_won then score[0] += 1
+  when :computer_won then score[1] += 1
   end
 
   score
@@ -125,64 +137,77 @@ def end_match?(score_player, score_computer)
     score_computer == GRAND_WINNING_NUMBER
 end
 
-def display_grand_winner_message(num_results)
-  case num_results
-  when 1 then prompt("Congratulations!")
-  when -1 then prompt("Better luck next time!")
+def display_grand_winner_message(result_symbol)
+  case result_symbol
+  when :player_won then prompt("Congratulations!")
+  when :computer_won then prompt("Better luck next time!")
   end
+end
+
+def display_rules
+  rules = <<~MSG
+  Rock crushes Lizard / crushes Scissors
+     Paper covers Rock / disproves Spock
+     Spock smashes Scissors / vaporizes Rock
+     Scissors cuts Paper / decapitates Lizard
+     Lizard eats Paper / poisons Spock
+  MSG
+  prompt(rules)
+end
+
+def ask_to_display_rules
+  prompt("Do you want to know the rules? (y/n)")
+
+  response = get_valid_input(VALID_RESPONSES)
+
+  system 'clear'
+  display_rules if response == 'yes'
+end
+
+def play_again?
+  prompt("Do you want to play again? (y/n)")
+  response = get_valid_input(VALID_RESPONSES)
+  response == 'yes'
 end
 
 valid_choices_str = VALID_CHOICES.join(', ')
 
 system 'clear'
 prompt("Welcome to the #{valid_choices_str} match!")
-prompt("Do you want to know the rules?")
 
-response = get_valid_input(VALID_RESPONSES)
-rules = <<~MSG
-  Rock crushes Lizard / crushes Scissors
-     Paper covers Rock / disproves Spock
-     Spock smashes Scissors / vaporizes Rock
-     Scissors cuts Paper / decapitates Lizard
-     Lizard eats Paper / poisons Spock
-MSG
-prompt(rules) if response == 'yes'
-system 'clear' if response == 'no'
+ask_to_display_rules
+
 loop do
   puts("-----------------------------------------------------")
   prompt("First one to score "\
          "#{GRAND_WINNING_NUMBER} points is the grand winner!")
 
   score = { player: 0, computer: 0 }
+
   loop do
-    choice = get_valid_input(VALID_CHOICES, "Choose one: #{valid_choices_str}")
+    choice_message = <<~MSG
+    Choose one: #{valid_choices_str} (input the full name or an abbreviation).
+       For scissors and spock, please input the first two letters at least ("sp" or "sc")
+    MSG
+
+    choice = get_valid_input(VALID_CHOICES, choice_message)
 
     computer_choice = get_computer_choice
-    num_results = results_number(choice, computer_choice)
+    results_symbol = results_sym(choice, computer_choice)
     score[:player], score[:computer] = array_new_score(score.values,
-                                                       num_results)
+                                                       results_symbol)
 
     system 'clear'
-    prompt("You chose: #{choice}; Computer chose: #{computer_choice}")
-    display_results(num_results)
-    prompt(
-      <<~MSG
-      The score is: #{score[:player]} for you,
-                       #{score[:computer]} for the computer.
-
-      MSG
-    )
+    display_results(choice, computer_choice, results_symbol, score)
 
     if end_match?(score[:player], score[:computer])
-      display_grand_winner_message(num_results)
+      display_grand_winner_message(results_symbol)
       break
     end
   end
 
-  prompt("Do you want to play again? (y/n)")
-  response = get_valid_input(VALID_RESPONSES)
-  break if response == 'no'
-  system 'clear' if response == 'yes'
+  break unless play_again?
+  system 'clear'
 end
 
 prompt("Thank you for playing. Good bye!")
