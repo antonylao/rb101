@@ -5,9 +5,10 @@
 YES = %w(y yes)
 NO = %w(n no)
 VALID_RESPONSE = YES + NO
-INITIAL_MARKER = ' '
+EMPTY_MARKER = ' '
 PLAYER_INITIAL_MARKER = 'X'
 COMPUTER_INITIAL_MARKER = 'O'
+INITIAL_MARKERS = [PLAYER_INITIAL_MARKER, COMPUTER_INITIAL_MARKER]
 MINIMAX_VAL_WIN = 1
 MINIMAX_VAL_LOSS = -1
 MINIMAX_VAL_TIE = 0
@@ -134,12 +135,12 @@ end
 def initialize_board
   new_board = {}
 
-  (1..NB_OF_SQUARES).each { |num| new_board[num] = INITIAL_MARKER }
+  (1..NB_OF_SQUARES).each { |num| new_board[num] = EMPTY_MARKER }
   new_board
 end
 
 def empty_squares(brd)
-  brd.keys.select { |num| brd[num] == INITIAL_MARKER }
+  brd.keys.select { |num| brd[num] == EMPTY_MARKER }
 end
 
 def player?(participant)
@@ -165,11 +166,11 @@ def player_places_piece!(brd, marker)
   square = ''
   loop do
     prompt "Choose a square (#{joinor(empty_squares(brd))}):"
-    square = gets.chomp.to_i
-    break if empty_squares(brd).include?(square)
+    square = gets.chomp.strip
+    break if empty_squares(brd).include?(square.to_i) && integer?(square)
     prompt "Sorry, that's not a valid choice."
   end
-
+  square = square.to_i
   brd[square] = marker
 end
 
@@ -225,7 +226,7 @@ def ai_square_suggestion(brd, participant, participants_data)
 
   WINNING_LINES.each do |line|
     if almost_winning_line?(brd, list_markers, line)
-      line.each { |square| return square if square == INITIAL_MARKER }
+      line.each { |square| return square if square == EMPTY_MARKER }
     end
   end
 
@@ -356,8 +357,8 @@ def yes_no_to_boolean(response)
   YES.include?(response)
 end
 
-def input_yes_or_no_boolean
-  yes_no_to_boolean(input_yes_or_no)
+def input_yes_or_no_boolean(message = nil)
+  yes_no_to_boolean(input_yes_or_no(message))
 end
 
 def input_player_name(player_id, list_all_names)
@@ -430,6 +431,7 @@ def participant_positions(participant_ids, choice_int)
   positions
 end
 
+# rubocop:disable Metrics/MethodLength
 def participant_markers(participant_ids)
   markers = {}
   marker_iterated = 'A'
@@ -440,11 +442,15 @@ def participant_markers(participant_ids)
       markers[participant_id] = COMPUTER_INITIAL_MARKER
     else
       markers[participant_id] = marker_iterated
-      marker_iterated = marker_iterated.next
+      loop do
+        marker_iterated = marker_iterated.next
+        break unless INITIAL_MARKERS.include?(marker_iterated)
+      end
     end
   end
   markers
 end
+# rubocop:enable Metrics/MethodLength
 
 def initialize_participants_data(participant_ids, names, markers)
   participants_data = {}
@@ -462,7 +468,12 @@ def initialize_participants_data(participant_ids, names, markers)
   participants_data
 end
 
-def update_participant_positions!(participants_data, positions)
+def update_participant_positions!(participants_data)
+  participant_ids = participants_data.keys
+
+  choice = input_order_choice
+  positions = participant_positions(participant_ids, choice)
+
   participants_data.each_value do |participant|
     participant[:position] = positions[participant[:id]]
   end
@@ -497,8 +508,7 @@ def tournament_winner(participants_data)
   winner
 end
 
-def play_whole_round!(participants)
-  brd = initialize_board
+def play_whole_round!(brd, participants)
   current_player = beginning_player(participants)
   loop do
     display_board(brd)
@@ -507,68 +517,101 @@ def play_whole_round!(participants)
     break if round_won?(brd, participants) || board_full?(brd)
   end
   display_board(brd)
+end
 
+def display_round_winner(brd, participants)
   if round_won?(brd, participants)
     round_winner = detect_round_winner(brd, participants)
     prompt "#{round_winner[:name]} won this round!"
-    update_score!(participants, round_winner)
   else
     prompt "It's a tie!"
   end
 end
 
-def update_score!(participants, winner)
-  participants[winner[:id]][:score] += 1
+def update_score!(brd, participants)
+  if round_won?(brd, participants)
+    winner = detect_round_winner(brd, participants)
+    participants[winner[:id]][:score] += 1
+  end
+end
+
+def play_again?
+  prompt "Play again? (y or n)"
+  input_yes_or_no_boolean
+end
+
+def name_choice_bool(nb_humans)
+  if nb_humans != 0
+    puts "Do you want to choose the participants names? (y/n)"
+    input_yes_or_no_boolean
+  else
+    false
+  end
+end
+
+def build_participants_data
+  humans_number = input_positive_integer("How many human players?")
+  computers_number = input_positive_integer("How many computer players?")
+  participants_number = humans_number + computers_number
+  if participants_number > NB_OF_SQUARES
+    prompt "Warning: Too many participants for the board size".upcase
+  end
+
+  choose_names = name_choice_bool(humans_number)
+
+  player_ids = (:player_1.."player_#{humans_number}".to_sym).to_a
+  computer_ids = (:computer_1.."computer_#{computers_number}".to_sym).to_a
+  participant_ids = player_ids + computer_ids
+
+  names = participant_names(player_ids, computer_ids, choose_names)
+  markers = participant_markers(participant_ids)
+  initialize_participants_data(participant_ids, names, markers)
+end
+
+def display_welcome_message
+  prompt "Welcome to the Tic Tac Toe tournament! "\
+         "First one to get to #{WINNING_SCORE} points win."
+end
+
+def display_tournament_winner(participant_info)
+  prompt "#{participant_info[:name]} won the tournament!"
+end
+
+def reset_participants_score!(participants_data)
+  participants_data.each_value do |participant_info|
+    participant_info[:score] = 0
+  end
 end
 
 if ACTIVATE_MINIMAX && SQUARES_PER_SIDE > 3
   prompt "Warning: computer will take too long to play".upcase
 end
 
-humans_number = input_positive_integer("How many human players?")
-computers_number = input_positive_integer("How many computer players?")
-
-if humans_number != 0
-  puts "Do you want to choose the participants names? (y/n)"
-  choose_names = input_yes_or_no_boolean
-else
-  choose_names = false
-end
-participants = {}
-
-player_ids = (:player_1.."player_#{humans_number}".to_sym).to_a
-computer_ids = (:computer_1.."computer_#{computers_number}".to_sym).to_a
-participant_ids = player_ids + computer_ids
-
-participant_names_hash = participant_names(player_ids, computer_ids,
-                                           choose_names)
-participant_markers_hash = participant_markers(participant_ids)
-
-participants = initialize_participants_data(participant_ids,
-                                            participant_names_hash,
-                                            participant_markers_hash)
-
+display_welcome_message
+participants = build_participants_data
+p participants
 loop do
-  choice = input_order_choice
-  participant_positions_hash = participant_positions(participant_ids, choice)
-  update_participant_positions!(participants, participant_positions_hash)
+  update_participant_positions!(participants)
 
+  winner = nil
   loop do
-    play_whole_round!(participants)
+    board = initialize_board
+    play_whole_round!(board, participants)
+    display_round_winner(board, participants)
+
+    update_score!(board, participants)
     display_score(participants)
     winner = tournament_winner(participants)
-    if winner
-      prompt "#{winner[:name]} won the tournament!"
-      break
-    end
+    break if winner
 
     prompt "Press enter to begin the next round"
     gets
     cycle_participants_order!(participants)
   end
 
-  prompt "Play again? (y or n)"
-  continue = input_yes_or_no_boolean
+  display_tournament_winner(winner)
+  continue = play_again?
   break unless continue
+  reset_participants_score!(participants)
 end
 prompt "Thanks for playing Tic Tac Toe! Good bye!"
