@@ -33,7 +33,7 @@ def input_hit_or_stay
 end
 
 def input_yes_or_no(message = nil)
-  puts message if message
+  puts message + " (y/n)" if message
   response = gets.chomp.strip.downcase
 
   unless VALID_YES_NO.include?(response)
@@ -231,8 +231,7 @@ def round_results(player_total, dealer_total)
 end
 
 def play_again?(message = nil)
-  prompt message + " (y/n)" if message
-  input_yes_or_no_boolean
+  input_yes_or_no_boolean(message)
 end
 
 def display_winner(results_round)
