@@ -1,8 +1,6 @@
 # Deck stays the same after a tournament ends
 # Deck re-shuffled when empty, and game continues
 
-require "pry"
-
 YES = %w(y yes)
 NO = %w(n no)
 VALID_YES_NO = YES + NO
@@ -338,7 +336,7 @@ def initialize_round!(deck, player, dealer)
   deal_initial_cards!(deck, player, dealer)
 end
 
-def process_round!(deck, player, dealer)
+def process_round!(player, dealer)
   result = round_results(player[:total], dealer[:total])
   winner = round_winner(result)
 
@@ -364,7 +362,7 @@ loop do
     player_turn!(deck, player, dealer_card_face_up)
     dealer_turn!(deck, dealer, player[:total]) unless busted?(player[:total])
 
-    process_round!(deck, player, dealer)
+    process_round!(player, dealer)
 
     if grand_winner?(player[:score], dealer[:score])
       grand_winner_id = grand_winner(player[:score], dealer[:score])
