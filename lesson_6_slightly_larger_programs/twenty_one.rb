@@ -1,6 +1,8 @@
 # Deck stays the same after a tournament ends
 # Deck re-shuffled when empty, and game continues
 
+require "pry"
+
 YES = %w(y yes)
 NO = %w(n no)
 VALID_YES_NO = YES + NO
@@ -10,6 +12,26 @@ PLAYER_TURN_CHOICES = HIT + STAY
 
 RANKS = (2..10).to_a.map(&:to_s) + %w(J Q K A)
 SUITS = %w(hearts diamonds clubs spades)
+
+ACE_HIGH_VALUE = 11
+ACE_LOW_VALUE = 1
+COURT_CARD_VALUE = 10
+
+def initial_value(rank)
+  if rank.to_i != 0
+    rank.to_i
+  elsif rank == 'A'
+    ACE_HIGH_VALUE
+  else
+    COURT_CARD_VALUE
+  end
+end
+
+# rubocop:disable Layout/BlockAlignment
+CARD_VALUES = Hash.new do |hash, rank|
+                hash[rank] = initial_value(rank) if RANKS.include?(rank)
+              end
+# rubocop:enable Layout/BlockAlignment
 
 MAX_VALUE = 31
 DEALER_LIMIT_VALUE = 27
@@ -44,32 +66,22 @@ def input_yes_or_no(message = nil)
   response
 end
 
-def yes_no_to_boolean(response)
+def yes?(response)
   YES.include?(response)
 end
 
-def input_yes_or_no_boolean(message = nil)
-  yes_no_to_boolean(input_yes_or_no(message))
+def input_yes_or_no?(message = nil)
+  yes?(input_yes_or_no(message))
 end
 
 def initialize_deck
   deck = []
   RANKS.each do |rank|
     SUITS.each do |suit|
-      deck << { rank: rank, suit: suit, value: initial_value(rank) }
+      deck << { rank: rank, suit: suit, value: CARD_VALUES[rank] }
     end
   end
   deck.shuffle
-end
-
-def initial_value(rank)
-  if rank.to_i != 0
-    rank.to_i
-  elsif rank == 'A'
-    11
-  else
-    10
-  end
 end
 
 def deal_initial_cards!(deck, player, dealer)
@@ -96,8 +108,8 @@ def deal_single_card!(deck, participant)
   nil
 end
 
-def ace_eleven?(card)
-  card[:rank] == 'A' && card[:value] == 11
+def ace_high_value?(card)
+  card[:rank] == 'A' && card[:value] == ACE_HIGH_VALUE
 end
 
 def total_value!(hand)
@@ -108,8 +120,8 @@ def total_value!(hand)
 
   if total > MAX_VALUE
     hand.each do |card|
-      if ace_eleven?(card)
-        card[:value] = 1
+      if ace_high_value?(card)
+        card[:value] = ACE_LOW_VALUE
         return total_value!(hand)
       end
     end
@@ -159,7 +171,6 @@ def first_player_turn_display(player, dealer_card)
 end
 
 def player_turn_display(player, dealer_card)
-  system 'clear'
   display_player_heading(dealer_card)
   display_card_drawed(player)
   display_cards(player)
@@ -172,6 +183,7 @@ def player_turn!(deck, player, dealer_card)
     choice = input_hit_or_stay
 
     if choice == :hit
+      system 'clear'
       deal_single_card!(deck, player)
       player_turn_display(player, dealer_card)
 
@@ -192,7 +204,6 @@ def first_dealer_turn_display(dealer, player_total)
 end
 
 def dealer_turn_display(dealer, player_total)
-  system 'clear'
   display_dealer_heading(player_total)
   display_card_drawed(dealer)
   display_cards(dealer)
@@ -204,6 +215,7 @@ def dealer_turn!(deck, dealer, player_total)
   while dealer[:total] < DEALER_LIMIT_VALUE
     input_enter
 
+    system 'clear'
     deal_single_card!(deck, dealer)
     dealer_turn_display(dealer, player_total)
   end
@@ -231,7 +243,7 @@ def round_results(player_total, dealer_total)
 end
 
 def play_again?(message = nil)
-  input_yes_or_no_boolean(message)
+  input_yes_or_no?(message)
 end
 
 def display_winner(results_round)
@@ -262,7 +274,15 @@ def round_winner(result)
 end
 
 def grand_winner?(player_score, dealer_score)
-  player_score == WINNING_SCORE || dealer_score == WINNING_SCORE
+  !!grand_winner(player_score, dealer_score)
+end
+
+def grand_winner(player_score, dealer_score)
+  if player_score == WINNING_SCORE
+    :player
+  elsif dealer_score == WINNING_SCORE
+    :dealer
+  end
 end
 
 def update_score(winner, player, dealer)
@@ -313,6 +333,20 @@ def initialize_participants_data
   [player, dealer]
 end
 
+def initialize_round!(deck, player, dealer)
+  reset_round!(player, dealer)
+  deal_initial_cards!(deck, player, dealer)
+end
+
+def process_round!(deck, player, dealer)
+  result = round_results(player[:total], dealer[:total])
+  winner = round_winner(result)
+
+  display_winner(result)
+  update_score(winner, player, dealer)
+  display_score(player[:score], dealer[:score])
+end
+
 system 'clear'
 display_welcome_message
 input_enter
@@ -322,30 +356,24 @@ player, dealer = initialize_participants_data
 
 loop do
   reset_score!(player, dealer)
-  grand_winner = :undefined
+  grand_winner_id = :undefined
   loop do
-    reset_round!(player, dealer)
-    deal_initial_cards!(deck, player, dealer)
-    dealer_card_face_up = dealer[:hand][0]
+    initialize_round!(deck, player, dealer)
 
+    dealer_card_face_up = dealer[:hand][0]
     player_turn!(deck, player, dealer_card_face_up)
     dealer_turn!(deck, dealer, player[:total]) unless busted?(player[:total])
 
-    result = round_results(player[:total], dealer[:total])
-    winner = round_winner(result)
-
-    display_winner(result)
-    update_score(winner, player, dealer)
-    display_score(player[:score], dealer[:score])
+    process_round!(deck, player, dealer)
 
     if grand_winner?(player[:score], dealer[:score])
-      grand_winner = winner
+      grand_winner_id = grand_winner(player[:score], dealer[:score])
       break
     end
 
     input_enter("Press enter to play the next round")
   end
-  display_grand_winner(grand_winner)
+  display_grand_winner(grand_winner_id)
 
   continue = play_again?("Player another tournament?")
   break unless continue
