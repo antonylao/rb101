@@ -589,7 +589,7 @@ end
 
 display_welcome_message
 participants = build_participants_data
-p participants
+
 loop do
   update_participant_positions!(participants)
 
